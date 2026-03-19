@@ -2,27 +2,94 @@ package session
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
-// -------------------------- 默认实现：SessionManager --------------------------
-// manager SessionManager接口的默认实现
 type manager struct {
 	store    SessionStore
 	config   Config
-	gcTicker *time.Ticker
 	ctx      context.Context
 	cancel   context.CancelFunc
+	gcTicker *time.Ticker
 }
 
-// NewManager 创建会话管理器实例
-func NewManager(store SessionStore, cfg Config) SessionManager {
+type Option func(*Config)
+
+func WithCookie(cfg CookieConfig) Option {
+	return func(c *Config) {
+		c.Cookie = cfg
+	}
+}
+func WithSecure(secure bool) Option {
+	return func(c *Config) {
+		c.Cookie.Secure = secure
+	}
+}
+func WithHttpOnly(httpOnly bool) Option {
+	return func(c *Config) {
+		c.Cookie.HttpOnly = httpOnly
+	}
+}
+func WithPath(path string) Option {
+	return func(c *Config) {
+		c.Cookie.Path = path
+	}
+}
+func WithDomain(domain string) Option {
+	return func(c *Config) {
+		c.Cookie.Domain = domain
+	}
+}
+func WithSameSite(sameSite http.SameSite) Option {
+	return func(c *Config) {
+		c.Cookie.SameSite = sameSite
+	}
+}
+func WithNName(name string) Option {
+	return func(c *Config) {
+		c.Cookie.Name = name
+	}
+}
+func WithMaxAge(maxAge int) Option {
+	return func(c *Config) {
+		c.Cookie.MaxAge = maxAge
+	}
+}
+func WithStoreConfig(cfg StoreConfig) Option {
+	return func(c *Config) {
+		c.Store = cfg
+	}
+}
+
+func WithExpires(expires time.Duration) Option {
+	return func(c *Config) {
+		c.Store.Expires = expires
+	}
+}
+
+func WithGCInterval(gcInterval time.Duration) Option {
+	return func(c *Config) {
+		c.Store.GCInterval = gcInterval
+	}
+}
+
+func WithSessionIDLen(sessionIDLen int) Option {
+	return func(c *Config) {
+		c.Store.SessionIDLen = sessionIDLen
+	}
+}
+func NewManager(store SessionStore, opts ...Option) SessionManager {
+	cfg := DefaultConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	if cfg.Cookie.Name == "" {
-		cfg.Cookie = DefaultConfig.Cookie
+		cfg.Cookie.Name = DefaultConfig.Cookie.Name
 	}
 	if cfg.Store.Expires == 0 {
-		cfg.Store = DefaultConfig.Store
+		cfg.Store.Expires = DefaultConfig.Store.Expires
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &manager{
@@ -33,71 +100,73 @@ func NewManager(store SessionStore, cfg Config) SessionManager {
 	}
 }
 
-// 实现SessionManager接口
-func (m *manager) GetSession(w http.ResponseWriter, r *http.Request) (Session, error) {
-	// 1. 从Cookie读取会话ID
-	var sessionID string
+func (m *manager) GetSession(w http.ResponseWriter, r *http.Request, create bool) (Session, error) {
+	var sessionId string
 	cookie, err := r.Cookie(m.config.Cookie.Name)
 	if err == nil {
-		sessionID = cookie.Value
+		sessionId = cookie.Value
 	}
 
-	// 2. 从存储获取会话
-	if sessionID != "" {
-		s, err := m.store.Get(r.Context(), sessionID)
+	if sessionId != "" {
+		s, err := m.store.Get(r.Context(), sessionId)
 		if err == nil && !s.IsExpired() {
 			return s, nil
 		}
 	}
 
-	// 3. 创建新会话
-	sessionID = NewSessionId(m.config.Store.SessionIDLen)
-	newSession := NewMemorySession(sessionID, m.config.Store.Expires)
+	if !create {
+		return nil, ErrNoSession
+	}
+
+	sessionId = generateId(m.config.Store.SessionIDLen)
+	newSession, err := m.store.NewSession(sessionId, m.config.Store.Expires)
+	if err != nil {
+		return nil, ErrSessionCreateErr
+	}
 	if err := m.store.Create(r.Context(), newSession); err != nil {
 		return nil, ErrSessionCreateErr
 	}
 
-	// 4. 设置Cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     m.config.Cookie.Name,
-		Value:    sessionID,
+		Value:    sessionId,
 		Path:     m.config.Cookie.Path,
 		Domain:   m.config.Cookie.Domain,
 		HttpOnly: m.config.Cookie.HttpOnly,
 		Secure:   m.config.Cookie.Secure,
 		MaxAge:   m.config.Cookie.MaxAge,
+		SameSite: m.config.Cookie.SameSite,
 	})
 
 	return newSession, nil
 }
 
 func (m *manager) DestroySession(w http.ResponseWriter, r *http.Request) error {
-	// 1. 读取Cookie
 	cookie, err := r.Cookie(m.config.Cookie.Name)
 	if err != nil {
 		return nil
 	}
 
-	// 2. 删除存储中的会话
 	if err := m.store.Delete(r.Context(), cookie.Value); err != nil {
 		return ErrSessionDeleteErr
 	}
 
-	// 3. 清空Cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     m.config.Cookie.Name,
 		Value:    "",
 		Path:     m.config.Cookie.Path,
+		Domain:   m.config.Cookie.Domain,
 		HttpOnly: m.config.Cookie.HttpOnly,
 		Secure:   m.config.Cookie.Secure,
-		MaxAge:   -1, // 立即过期
+		MaxAge:   -1,
+		SameSite: m.config.Cookie.SameSite,
 	})
 
 	return nil
 }
 
 func (m *manager) Start() error {
-	// 启动GC定时任务
+	slog.Info("start session manager")
 	m.gcTicker = time.NewTicker(m.config.Store.GCInterval)
 	go func() {
 		for {
@@ -114,6 +183,7 @@ func (m *manager) Start() error {
 }
 
 func (m *manager) Stop() error {
-	m.cancel()             // 停止GC
-	return m.store.Close() // 关闭存储
+	slog.Info("stop session manager")
+	m.cancel()
+	return m.store.Close()
 }
