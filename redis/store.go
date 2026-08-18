@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"go-session" // 替换为实际模块路径
+	"go-session"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type redisStore struct {

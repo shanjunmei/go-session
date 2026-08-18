@@ -3,10 +3,10 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
-	"github.com/go-redis/redis/v8"
-	// 替换为实际模块路径
+	"github.com/redis/go-redis/v9"
 )
 
 // redisSession 实现 session.Session 接口，数据存储在Redis中
@@ -137,9 +137,10 @@ func (s *redisSession) LastAccessedAt() time.Time {
 	if err != nil {
 		return time.Time{}
 	}
-	var last int64
-	_, _ = time.ParseDuration(lastStr) // 实际存储为Unix时间戳字符串
-	// 这里简化处理，假设存储的是Unix时间戳字符串
+	last, err := strconv.ParseInt(lastStr, 10, 64)
+	if err != nil {
+		return time.Time{}
+	}
 	return time.Unix(last, 0)
 }
 

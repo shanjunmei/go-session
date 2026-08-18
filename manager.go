@@ -47,7 +47,7 @@ func WithSameSite(sameSite http.SameSite) Option {
 		c.Cookie.SameSite = sameSite
 	}
 }
-func WithNName(name string) Option {
+func WithName(name string) Option {
 	return func(c *Config) {
 		c.Cookie.Name = name
 	}
