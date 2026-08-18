@@ -76,6 +76,8 @@ func (s *sqlStore) Get(ctx context.Context, sessionID string) (session.Session, 
 	if _, err := s.db.ExecContext(ctx, s.dialect.TouchSQL(), sessionID); err != nil {
 		_ = err // best-effort
 	}
+	// Keep the in-memory value consistent with what TouchSQL wrote to the DB.
+	la = time.Now()
 	gs, err := loadSQLSession(id, data, expiresAt, la)
 	if err != nil {
 		return nil, fmt.Errorf("load session: %w", err)
