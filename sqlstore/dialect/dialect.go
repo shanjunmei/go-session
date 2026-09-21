@@ -20,4 +20,7 @@ type Dialect interface {
 	TouchSQL() string
 	// GCSQL deletes rows whose expires_at is before the argument. Arg: now.
 	GCSQL() string
+	// CountSQL counts active sessions (expires_at after the argument). Arg: now.
+	// Dialects MUST use their own placeholder style (? for sqlite, $1 for postgres).
+	CountSQL() string
 }

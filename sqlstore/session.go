@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"go-session"
+	"github.com/shanjunmei/go-session"
 )
 
 type sqlSession struct {
@@ -149,6 +150,8 @@ func (s *sqlSession) UpdateAccessedAt() {
 // before calling this; the store reads a consistent snapshot under RLock.
 func (s *sqlSession) persist() {
 	if s.store != nil {
-		_ = s.store.Update(context.Background(), s)
+		if err := s.store.Update(context.Background(), s); err != nil {
+			slog.Error("session persist failed", "id", s.id, "error", err)
+		}
 	}
 }

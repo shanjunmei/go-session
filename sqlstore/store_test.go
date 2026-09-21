@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"go-session"
-	"go-session/sqlstore/sqlite"
+	"github.com/shanjunmei/go-session"
+	"github.com/shanjunmei/go-session/sqlstore/sqlite"
 
 	_ "modernc.org/sqlite"
 )

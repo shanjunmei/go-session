@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"go-session" // 根据实际模块路径替换
+	"github.com/shanjunmei/go-session" // 根据实际模块路径替换
 )
 
 type memoryStore struct {
@@ -67,6 +67,19 @@ func (m *memoryStore) Delete(ctx context.Context, sessionId string) error {
 	}
 	delete(m.sessions, sessionId)
 	return nil
+}
+
+// Count 统计当前活动（未过期）会话数。
+func (m *memoryStore) Count(ctx context.Context) (int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	n := 0
+	for _, s := range m.sessions {
+		if !s.IsExpired() {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (m *memoryStore) GC(ctx context.Context) error {

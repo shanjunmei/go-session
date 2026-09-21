@@ -106,7 +106,6 @@ func (m *manager) GetSession(w http.ResponseWriter, r *http.Request, create bool
 	if err == nil {
 		sessionId = cookie.Value
 	}
-
 	if sessionId != "" {
 		s, err := m.store.Get(r.Context(), sessionId)
 		if err == nil && !s.IsExpired() {

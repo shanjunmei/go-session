@@ -1,4 +1,4 @@
-module go-session
+module github.com/shanjunmei/go-session
 
 go 1.25.5
 

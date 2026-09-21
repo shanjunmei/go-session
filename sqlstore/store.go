@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"go-session"
-	"go-session/sqlstore/dialect"
+	"github.com/shanjunmei/go-session"
+	"github.com/shanjunmei/go-session/sqlstore/dialect"
 )
 
 // sqlStore is the core SQL-backed session store. It depends only on the
@@ -125,6 +125,15 @@ func (s *sqlStore) Delete(ctx context.Context, sessionID string) error {
 		return session.ErrSessionNotFound
 	}
 	return nil
+}
+
+// Count returns the number of active (not yet expired) sessions.
+func (s *sqlStore) Count(ctx context.Context) (int, error) {
+	var n int
+	if err := s.db.QueryRowContext(ctx, s.dialect.CountSQL(), time.Now()).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count sessions: %w", err)
+	}
+	return n, nil
 }
 
 func (s *sqlStore) GC(ctx context.Context) error {

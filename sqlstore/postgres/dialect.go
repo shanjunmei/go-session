@@ -2,7 +2,7 @@
 // Use it together with the pure-Go pgx/stdlib driver.
 package postgres
 
-import "go-session/sqlstore/dialect"
+import "github.com/shanjunmei/go-session/sqlstore/dialect"
 
 type postgresDialect struct{}
 
@@ -26,6 +26,7 @@ func (postgresDialect) TouchSQL() string {
 	return `UPDATE sessions SET last_accessed = NOW() WHERE id = $1`
 }
 func (postgresDialect) GCSQL() string { return `DELETE FROM sessions WHERE expires_at < $1` }
+func (postgresDialect) CountSQL() string { return `SELECT COUNT(*) FROM sessions WHERE expires_at > $1` }
 
 // Dialect is the PostgreSQL dialect. Pass it to sqlstore.NewStore.
 var Dialect dialect.Dialect = postgresDialect{}

@@ -2,7 +2,7 @@
 // Use it together with the pure-Go modernc.org/sqlite driver.
 package sqlite
 
-import "go-session/sqlstore/dialect"
+import "github.com/shanjunmei/go-session/sqlstore/dialect"
 
 type sqliteDialect struct{}
 
@@ -26,6 +26,7 @@ func (sqliteDialect) TouchSQL() string {
 	return `UPDATE sessions SET last_accessed = CURRENT_TIMESTAMP WHERE id = ?`
 }
 func (sqliteDialect) GCSQL() string { return `DELETE FROM sessions WHERE expires_at < ?` }
+func (sqliteDialect) CountSQL() string { return `SELECT COUNT(*) FROM sessions WHERE expires_at > ?` }
 
 // Dialect is the SQLite dialect. Pass it to sqlstore.NewStore.
 var Dialect dialect.Dialect = sqliteDialect{}

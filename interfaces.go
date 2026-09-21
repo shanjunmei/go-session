@@ -27,6 +27,7 @@ type SessionStore interface {
 	Get(ctx context.Context, sessionId string) (Session, error)   // 获取会话
 	Update(ctx context.Context, s Session) error                  // 更新会话
 	Delete(ctx context.Context, sessionId string) error           // 删除会话
+	Count(ctx context.Context) (int, error)                        // 当前活动会话数（监控/指标）
 	GC(ctx context.Context) error                                 // 清理过期会话
 	Close() error                                                 // 关闭存储
 }

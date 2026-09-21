@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"go-session"
+	"github.com/shanjunmei/go-session"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -105,6 +105,53 @@ func (r *redisStore) Delete(ctx context.Context, sessionId string) error {
 		return session.ErrSessionNotFound
 	}
 	return nil
+}
+
+// Count 返回当前活动（未过期）会话数（监控/指标）。
+//
+// 实现说明：Redis 的 SCAN 只遍历 keyspace 字典，既不触发惰性过期检查，
+// 也不会过滤掉 TTL 已到期、但尚未被后台主动淘汰（activeExpireCycle）的物理 key。
+// 因此直接累加 SCAN 结果会把已过期的会话也算入，导致统计偏高，且与
+// interfaces.go 中 "当前活动会话数" 的契约以及 memory/sqlstore 的语义不一致。
+// 这里对每个 SCAN 批次用 Pipeline 批量查询 PTTL，仅统计 TTL 仍有效的 key，
+// 以得到与其他存储一致的活动会话数。
+func (r *redisStore) Count(ctx context.Context) (int, error) {
+	var n int
+	var cursor uint64
+	for {
+		keys, next, err := r.client.Scan(ctx, cursor, "session:*", 256).Result()
+		if err != nil {
+			return 0, err
+		}
+		if len(keys) > 0 {
+			// 批量查询 TTL，过滤已过期但尚未被 Redis 淘汰的 key。
+			cmds, err := r.client.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for _, k := range keys {
+					pipe.PTTL(ctx, k)
+				}
+				return nil
+			})
+			if err != nil {
+				return 0, err
+			}
+			for _, cmdr := range cmds {
+				dur, err := cmdr.(*redis.DurationCmd).Result()
+				if err != nil {
+					return 0, err
+				}
+				// PTTL 语义：>=0 表示仍有剩余时间；-1 表示无过期（持久，视为活动）；
+				// -2 或其余负值表示已过期/不存在，不计入活动会话。
+				if dur >= 0 || dur == -1 {
+					n++
+				}
+			}
+		}
+		cursor = next
+		if cursor == 0 {
+			break
+		}
+	}
+	return n, nil
 }
 
 // GC Redis自动处理过期，无需操作

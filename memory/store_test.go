@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"go-session"
+	"github.com/shanjunmei/go-session"
 )
 
 func TestMemoryStoreContract(t *testing.T) {
