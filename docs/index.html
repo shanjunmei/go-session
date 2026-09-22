@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="go-session — a lightweight, storage-agnostic HTTP session library for Go. 轻量级、存储无关的 Go HTTP 会话管理库。" />
+  <title>go-session</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f6f8fa;
+      --fg: #1f2328;
+      --fg-soft: #57606a;
+      --border: #d0d7de;
+      --accent: #2f6feb;
+      --accent-soft: #dde9ff;
+      --code-bg: #f6f8fa;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .08);
+      --radius: 12px;
+      --maxw: 880px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0d1117;
+        --bg-soft: #161b22;
+        --fg: #e6edf3;
+        --fg-soft: #8b949e;
+        --border: #30363d;
+        --accent: #4793ff;
+        --accent-soft: #1b2a44;
+        --code-bg: #161b22;
+        --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+      }
+    }
+    html[data-theme="dark"] {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --fg: #e6edf3;
+      --fg-soft: #8b949e;
+      --border: #30363d;
+      --accent: #4793ff;
+      --accent-soft: #1b2a44;
+      --code-bg: #161b22;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+    }
+    html[data-theme="light"] {
+      --bg: #ffffff;
+      --bg-soft: #f6f8fa;
+      --fg: #1f2328;
+      --fg-soft: #57606a;
+      --border: #d0d7de;
+      --accent: #2f6feb;
+      --accent-soft: #dde9ff;
+      --code-bg: #f6f8fa;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.7;
+      transition: background .25s ease, color .25s ease;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
+    .brand .dot { color: var(--accent); }
+    .controls { display: flex; gap: 8px; }
+    .icon-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      width: 40px; height: 40px; justify-content: center;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg-soft); color: var(--fg);
+      cursor: pointer; transition: background .2s ease, border-color .2s ease;
+    }
+    .icon-btn:hover { border-color: var(--accent); }
+    .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .lang-btn { width: auto; padding: 0 12px; font-weight: 600; font-size: 14px; }
+    .lang-btn .globe { width: 18px; height: 18px; }
+
+    .icon-sun { display: none; }
+    .icon-moon { display: inline-block; }
+    html[data-theme="dark"] .icon-sun { display: inline-block; }
+    html[data-theme="dark"] .icon-moon { display: none; }
+
+    /* i18n visibility */
+    :lang(zh) .en { display: none; }
+    :lang(en) .zh { display: none; }
+
+    /* Hero */
+    .hero { padding: 64px 0 40px; text-align: center; }
+    .hero h1 { font-size: 44px; margin: 0 0 12px; letter-spacing: -.5px; }
+    .hero p.tagline { font-size: 18px; color: var(--fg-soft); margin: 0 auto 20px; max-width: 620px; }
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+    .badge {
+      font-size: 13px; padding: 4px 10px; border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
+    }
+    .cta { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-block; padding: 10px 18px; border-radius: 10px; font-weight: 600;
+      border: 1px solid var(--border); background: var(--bg-soft); color: var(--fg);
+    }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn:hover { text-decoration: none; opacity: .92; }
+
+    /* Sections */
+    section { padding: 36px 0; border-top: 1px solid var(--border); }
+    section h2 { font-size: 26px; margin: 0 0 18px; }
+    section h3 { font-size: 18px; margin: 22px 0 10px; }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px; box-shadow: var(--shadow);
+    }
+    .card .ic { color: var(--accent); margin-bottom: 8px; }
+    .card .ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .card h3 { margin: 0 0 6px; font-size: 16px; }
+    .card p { margin: 0; color: var(--fg-soft); font-size: 14px; }
+
+    pre {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow: auto; font-size: 13.5px; line-height: 1.6;
+    }
+    code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+    p code, li code { background: var(--code-bg); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--bg-soft); color: var(--fg); font-weight: 600; }
+    td code { white-space: nowrap; }
+
+    .note {
+      background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px;
+      padding: 14px 16px; font-size: 14.5px;
+    }
+    .note b { color: var(--accent); }
+
+    footer { padding: 30px 0 50px; border-top: 1px solid var(--border); color: var(--fg-soft); font-size: 13.5px; text-align: center; }
+
+    @media (max-width: 560px) {
+      .hero h1 { font-size: 34px; }
+      .brand { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">go<span class="dot">-</span>session</div>
+    <div class="controls">
+      <button id="langToggle" class="icon-btn lang-btn" type="button" aria-label="Switch language">
+        <svg class="globe" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"></path>
+        </svg>
+        <span id="langLabel">EN</span>
+      </button>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle color theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.2"></circle>
+          <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" style="border-top:none">
+      <h1>go-session</h1>
+      <p class="tagline">
+        <span class="zh">轻量级、存储无关的 Go HTTP 会话管理库。</span>
+        <span class="en">A lightweight, storage-agnostic HTTP session library for Go.</span>
+      </p>
+      <div class="badges">
+        <span class="badge">Go ≥ 1.25</span>
+        <span class="badge">memory · redis · sql</span>
+        <span class="badge">MIT-style API</span>
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="#quickstart">
+          <span class="zh">快速开始</span><span class="en">Quick start</span>
+        </a>
+        <a class="btn" href="https://github.com/shanjunmei/go-session">
+          <span class="zh">在 GitHub 查看</span><span class="en">View on GitHub</span>
+        </a>
+      </div>
+    </section>
+
+    <section id="features">
+      <h2>
+        <span class="zh">特性</span><span class="en">Features</span>
+      </h2>
+      <div class="features">
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"></ellipse><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></svg></div>
+          <h3><span class="zh">可插拔存储</span><span class="en">Pluggable storage</span></h3>
+          <p><span class="zh">内存、Redis、SQL（SQLite / PostgreSQL）三种实现，统一遵循 <code>SessionStore</code> 接口。</span><span class="en">In-memory, Redis, and SQL (SQLite / PostgreSQL) backends behind one <code>SessionStore</code> interface.</span></p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="M4 9h16M9 4v16"></path></svg></div>
+          <h3><span class="zh">HTTP 集成</span><span class="en">HTTP integration</span></h3>
+          <p><span class="zh"><code>SessionManager</code> 基于 <code>net/http</code> 提供 Cookie 会话与后台 GC。</span><span class="en"><code>SessionManager</code> provides cookie sessions and a background GC over <code>net/http</code>.</span></p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5M9 2h6"></path></svg></div>
+          <h3><span class="zh">统一过期语义</span><span class="en">Consistent expiry</span></h3>
+          <p><span class="zh">TTL 惰性校验 + 后台回收；<code>Count</code> 全后端返回活动会话数。</span><span class="en">Lazy TTL validation plus background GC; <code>Count</code> returns active sessions everywhere.</span></p>
+        </div>
+        <div class="card">
+          <div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path></svg></div>
+          <h3><span class="zh">并发安全</span><span class="en">Concurrency-safe</span></h3>
+          <p><span class="zh">各后端对读写加锁或使用单连接客户端，可安全用于并发 handler。</span><span class="en">Each backend guards its paths or uses a single client — safe under concurrent handlers.</span></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2><span class="zh">安装</span><span class="en">Install</span></h2>
+      <pre><code>go get github.com/shanjunmei/go-session</code></pre>
+      <p><span class="zh">要求 Go 1.25 及以上。</span><span class="en">Requires Go 1.25 or later.</span></p>
+    </section>
+
+    <section id="quickstart">
+      <h2><span class="zh">快速开始</span><span class="en">Quick start</span></h2>
+
+      <h3><span class="zh">内存存储（memory）</span><span class="en">In-memory store (memory)</span></h3>
+      <pre><code>package main
+
+import (
+    "net/http"
+
+    "github.com/shanjunmei/go-session"
+    "github.com/shanjunmei/go-session/memory"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    store := memory.NewStore()
+    m := session.NewManager(store)
+    _ = m.Start()
+    defer m.Stop()
+
+    // create=true: auto-create when missing
+    sess, err := m.GetSession(w, r, true)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    sess.Set("user", 42)
+}</code></pre>
+
+      <h3><span class="zh">Redis 存储（redis）</span><span class="en">Redis store (redis)</span></h3>
+      <pre><code>import (
+    "github.com/redis/go-redis/v9"
+    "github.com/shanjunmei/go-session"
+    "github.com/shanjunmei/go-session/redis"
+)
+
+client := redis.NewClient(&amp;redis.Options{Addr: "localhost:6379"})
+store := redis.NewStore(client)
+m := session.NewManager(store)</code></pre>
+
+      <h3><span class="zh">SQL 存储（sqlstore）</span><span class="en">SQL store (sqlstore)</span></h3>
+      <pre><code>import (
+    "database/sql"
+
+    _ "modernc.org/sqlite" // pure-Go SQLite driver
+
+    "github.com/shanjunmei/go-session"
+    "github.com/shanjunmei/go-session/sqlstore"
+    "github.com/shanjunmei/go-session/sqlstore/sqlite"
+)
+
+db, err := sql.Open("sqlite", "sessions.db")
+if err != nil {
+    panic(err)
+}
+// use postgres.Dialect for PostgreSQL
+store, err := sqlstore.NewStore(db, sqlite.Dialect)
+if err != nil {
+    panic(err)
+}
+m := session.NewManager(store)</code></pre>
+      <p><span class="zh"><code>NewStore</code> 构造时执行一次 <code>CREATE TABLE IF NOT EXISTS sessions</code>（字段：<code>id</code>、<code>data</code>、<code>expires_at</code>、<code>last_accessed</code>）。</span><span class="en"><code>NewStore</code> runs <code>CREATE TABLE IF NOT EXISTS sessions</code> once (columns: <code>id</code>, <code>data</code>, <code>expires_at</code>, <code>last_accessed</code>).</span></p>
+    </section>
+
+    <section id="api">
+      <h2><span class="zh">API 概览</span><span class="en">API overview</span></h2>
+
+      <h3><span class="zh">配置项（Option）</span><span class="en">Configuration (Option)</span></h3>
+      <pre><code>m := session.NewManager(store,
+    session.WithName("sid"),
+    session.WithPath("/"),
+    session.WithDomain("example.com"),
+    session.WithSecure(true),
+    session.WithHttpOnly(true),
+    session.WithSameSite(http.SameSiteLaxMode),
+    session.WithExpires(12*time.Hour),
+    session.WithGCInterval(10*time.Minute),
+    session.WithSessionIDLen(32),
+)</code></pre>
+      <p><span class="zh">默认值：<code>Cookie.Name="sessionId"</code>、<code>Store.Expires=24h</code>、<code>Store.GCInterval=5m</code>、<code>Store.SessionIDLen=16</code>。</span><span class="en">Defaults: <code>Cookie.Name="sessionId"</code>, <code>Store.Expires=24h</code>, <code>Store.GCInterval=5m</code>, <code>Store.SessionIDLen=16</code>.</span></p>
+
+      <h3><code>session.Session</code></h3>
+      <table>
+        <thead><tr><th><span class="zh">方法</span><span class="en">Method</span></th><th><span class="zh">说明</span><span class="en">Description</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>ID() string</code></td><td><span class="zh">会话唯一 ID</span><span class="en">Unique session ID</span></td></tr>
+          <tr><td><code>Get(key) (any, bool)</code></td><td><span class="zh">读取属性</span><span class="en">Read an attribute</span></td></tr>
+          <tr><td><code>Set(key, value)</code></td><td><span class="zh">写入属性（Redis/SQL 同步持久化）</span><span class="en">Write an attribute (Redis/SQL persist immediately)</span></td></tr>
+          <tr><td><code>Del(key)</code></td><td><span class="zh">删除属性</span><span class="en">Delete an attribute</span></td></tr>
+          <tr><td><code>Clear()</code></td><td><span class="zh">清空所有属性</span><span class="en">Clear all attributes</span></td></tr>
+          <tr><td><code>ExpiresAt() time.Time</code></td><td><span class="zh">过期时间</span><span class="en">Expiry time</span></td></tr>
+          <tr><td><code>SetExpires(d)</code></td><td><span class="zh">设置过期时长</span><span class="en">Set expiry duration</span></td></tr>
+          <tr><td><code>IsExpired() bool</code></td><td><span class="zh">是否已过期</span><span class="en">Whether expired</span></td></tr>
+          <tr><td><code>LastAccessedAt() time.Time</code></td><td><span class="zh">最后访问时间</span><span class="en">Last access time</span></td></tr>
+          <tr><td><code>UpdateAccessedAt()</code></td><td><span class="zh">刷新最后访问时间</span><span class="en">Refresh last access time</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>session.SessionStore</code></h3>
+      <table>
+        <thead><tr><th><span class="zh">方法</span><span class="en">Method</span></th><th><span class="zh">说明</span><span class="en">Description</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>NewSession(id, expires)</code></td><td><span class="zh">创建会话实例（尚未持久化）</span><span class="en">Create instance (not yet persisted)</span></td></tr>
+          <tr><td><code>Create(ctx, s)</code></td><td><span class="zh">持久化会话</span><span class="en">Persist the session</span></td></tr>
+          <tr><td><code>Get(ctx, id)</code></td><td><span class="zh">加载（过期返回 ErrSessionExpired）</span><span class="en">Load (returns ErrSessionExpired if expired)</span></td></tr>
+          <tr><td><code>Update(ctx, s)</code></td><td><span class="zh">更新会话</span><span class="en">Update the session</span></td></tr>
+          <tr><td><code>Delete(ctx, id)</code></td><td><span class="zh">删除会话</span><span class="en">Delete the session</span></td></tr>
+          <tr><td><code>Count(ctx) int</code></td><td><span class="zh">当前活动会话数（监控/指标）</span><span class="en">Active session count (monitoring/metrics)</span></td></tr>
+          <tr><td><code>GC(ctx)</code></td><td><span class="zh">清理过期会话</span><span class="en">Reclaim expired sessions</span></td></tr>
+          <tr><td><code>Close()</code></td><td><span class="zh">关闭存储</span><span class="en">Close the store</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>session.SessionManager</code></h3>
+      <table>
+        <thead><tr><th><span class="zh">方法</span><span class="en">Method</span></th><th><span class="zh">说明</span><span class="en">Description</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>GetSession(w, r, create)</code></td><td><span class="zh">按 Cookie 解析/创建会话</span><span class="en">Resolve/create a session from the cookie</span></td></tr>
+          <tr><td><code>DestroySession(w, r)</code></td><td><span class="zh">销毁会话并清除 Cookie</span><span class="en">Destroy session and clear cookie</span></td></tr>
+          <tr><td><code>Start()</code></td><td><span class="zh">启动后台 GC ticker</span><span class="en">Start background GC ticker</span></td></tr>
+          <tr><td><code>Stop()</code></td><td><span class="zh">停止 GC 并关闭存储</span><span class="en">Stop GC and close the store</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="count">
+      <h2><span class="zh">关于 Count</span><span class="en">On Count</span></h2>
+      <div class="note">
+        <p><span class="zh"><b>契约：</b><code>Count</code> 返回<b>当前活动（未过期）会话数</b>，用于监控/指标。三个后端保持一致：</span><span class="en"><b>Contract:</b> <code>Count</code> returns the number of <b>active (non-expired)</b> sessions, for monitoring/metrics. All three backends stay consistent:</span></p>
+        <ul>
+          <li><span class="zh"><code>memory</code>：排除 <code>IsExpired()</code> 为真的会话。</span><span class="en"><code>memory</code>: excludes sessions where <code>IsExpired()</code> is true.</span></li>
+          <li><span class="zh"><code>sqlstore</code>：<code>SELECT COUNT(*) FROM sessions WHERE expires_at &gt; ?</code>。</span><span class="en"><code>sqlstore</code>: <code>SELECT COUNT(*) FROM sessions WHERE expires_at &gt; ?</code>.</span></li>
+          <li><span class="zh"><code>redis</code>：<code>SCAN session:*</code> 分批迭代，对每个 key 批量查询 <code>PTTL</code>，仅计入 TTL 仍有效（或持久无过期）的 key，从而排除 TTL 已到期、但 Redis 后台尚未淘汰的物理 key。</span><span class="en"><code>redis</code>: iterates <code>session:*</code> with <code>SCAN</code> in batches, queries <code>PTTL</code> per key in a pipeline, and counts only keys whose TTL is still valid (or persistent) — excluding keys whose TTL elapsed but Redis has not yet evicted.</span></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <span class="zh">本页为双语（中文 / English）、双主题（亮 / 暗）单页，位于仓库 <code>docs/</code> 目录，不构成独立项目。</span>
+      <span class="en">This bilingual (Chinese / English), dual-theme (light / dark) single page lives in the repository <code>docs/</code> directory and is not a separate project.</span>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var THEME_KEY = "go-session-theme";
+      var LANG_KEY = "go-session-lang";
+
+      function systemPrefersDark() {
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+      function effectiveTheme() {
+        return root.getAttribute("data-theme") ||
+          (systemPrefersDark() ? "dark" : "light");
+      }
+      function applyTheme(t) {
+        root.setAttribute("data-theme", t);
+        try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+      }
+
+      // initial theme
+      var savedTheme = null;
+      try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
+      if (savedTheme === "light" || savedTheme === "dark") {
+        root.setAttribute("data-theme", savedTheme);
+      } else {
+        root.setAttribute("data-theme", systemPrefersDark() ? "dark" : "light");
+      }
+
+      // initial language
+      var savedLang = null;
+      try { savedLang = localStorage.getItem(LANG_KEY); } catch (e) {}
+      var lang = (savedLang === "en" || savedLang === "zh") ? savedLang : "zh";
+      root.setAttribute("lang", lang === "en" ? "en" : "zh-CN");
+      var langLabel = document.getElementById("langLabel");
+      if (langLabel) langLabel.textContent = lang === "zh" ? "EN" : "中";
+
+      document.getElementById("themeToggle").addEventListener("click", function () {
+        applyTheme(effectiveTheme() === "dark" ? "light" : "dark");
+      });
+
+      document.getElementById("langToggle").addEventListener("click", function () {
+        lang = (lang === "zh") ? "en" : "zh";
+        root.setAttribute("lang", lang === "en" ? "en" : "zh-CN");
+        if (langLabel) langLabel.textContent = lang === "zh" ? "EN" : "中";
+        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+      });
+    })();
+  </script>
+</body>
+</html>
