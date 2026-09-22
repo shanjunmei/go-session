@@ -14,11 +14,20 @@ Module path: `github.com/shanjunmei/go-session`
 
 ### Install
 
+The core module (including the `memory` backend) requires Go 1.21 or later:
+
 ```bash
 go get github.com/shanjunmei/go-session
 ```
 
-Requires Go 1.25 or later.
+The `redis` and `sqlstore` backends are **separate nested modules**, imported on demand, each with its own Go version floor:
+
+```bash
+go get github.com/shanjunmei/go-session/redis      # requires Go 1.24+
+go get github.com/shanjunmei/go-session/sqlstore   # requires Go 1.25+ (pure-Go SQLite)
+```
+
+> Consumers that do not use the heavy backends are not forced onto a newer Go toolchain.
 
 ### Quick start
 

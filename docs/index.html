@@ -193,7 +193,7 @@
         <span class="en">A lightweight, storage-agnostic HTTP session library for Go.</span>
       </p>
       <div class="badges">
-        <span class="badge">Go ≥ 1.25</span>
+        <span class="badge">Go 1.21+</span>
         <span class="badge">memory · redis · sql</span>
         <span class="badge">MIT-style API</span>
       </div>
@@ -237,8 +237,10 @@
 
     <section id="install">
       <h2><span class="zh">安装</span><span class="en">Install</span></h2>
-      <pre><code>go get github.com/shanjunmei/go-session</code></pre>
-      <p><span class="zh">要求 Go 1.25 及以上。</span><span class="en">Requires Go 1.25 or later.</span></p>
+      <pre><code>go get github.com/shanjunmei/go-session              # core + memory (Go 1.21+)
+go get github.com/shanjunmei/go-session/redis     # Go 1.24+
+go get github.com/shanjunmei/go-session/sqlstore  # Go 1.25+ (pure-Go SQLite)</code></pre>
+      <p><span class="zh"><code>redis</code> 与 <code>sqlstore</code> 是独立嵌套模块，按需引入，避免把更高的 Go 工具链要求强加给核心消费者。</span><span class="en"><code>redis</code> and <code>sqlstore</code> are separate nested modules, imported on demand so the heavier Go toolchain requirement is not imposed on core consumers.</span></p>
     </section>
 
     <section id="quickstart">

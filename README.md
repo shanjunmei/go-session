@@ -16,11 +16,20 @@
 
 ## 安装
 
+核心模块（含 `memory` 后端）仅需 Go 1.21 及以上：
+
 ```bash
 go get github.com/shanjunmei/go-session
 ```
 
-要求 Go 1.25 及以上。
+`redis` 与 `sqlstore` 后端是**独立嵌套模块**，按需单独引入，并各自带 Go 版本下限：
+
+```bash
+go get github.com/shanjunmei/go-session/redis      # 要求 Go 1.24+
+go get github.com/shanjunmei/go-session/sqlstore   # 要求 Go 1.25+（纯 Go SQLite）
+```
+
+> 未使用重后端的消费者不会被更高的 Go 工具链要求拖累。
 
 ## 快速开始
 
